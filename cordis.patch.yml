@@ -1,0 +1,7 @@
+# dsh-vision bundle patch for the DSH host composition.
+# When this package is listed in the profile's `dsh.profile.bundles`,
+# the loader merges this patch automatically: the row below mounts the
+# host-side vision bridge for every session.
+- insert:
+    - id: dsh-vision
+      name: '@cdxdnrf/dsh-vision'

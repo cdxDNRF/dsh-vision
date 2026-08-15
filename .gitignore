@@ -1,0 +1,9 @@
+# local secrets — never commit the working config with a real API key
+config.json
+*.local.json
+
+# node / pnpm artifacts
+node_modules/
+.pnpm-store/
+*.log
+.DS_Store

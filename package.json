@@ -1,0 +1,62 @@
+{
+  "name": "@cdxdnrf/dsh-vision",
+  "version": "0.1.0",
+  "description": "DeepSeek Harness vision bridge plugin: send images to ANY model; text-only models receive auto-generated vision descriptions (OpenAI-compatible vision API), plus a `vision` tool for the agent",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "scripts": {
+    "check": "node --check lib/index.js && node --check cli/vision.mjs && node --check scripts/smoke.mjs",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "files": [
+    "lib",
+    "cli",
+    "scripts",
+    "cordis.patch.yml",
+    "config.example.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "vision",
+    "multimodal",
+    "image",
+    "cordis"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cdxDNRF/dsh-vision.git"
+  },
+  "license": "MIT",
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-attachment": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-llm": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-tools": "^0.1.0-rc.6"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-attachment": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-llm": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-tools": {
+      "optional": true
+    }
+  }
+}
