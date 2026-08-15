@@ -1,20 +1,31 @@
 {
   "name": "@cdxdnrf/dsh-vision",
-  "version": "0.1.0",
-  "description": "DeepSeek Harness vision bridge plugin: send images to ANY model; text-only models receive auto-generated vision descriptions (OpenAI-compatible vision API), plus a `vision` tool for the agent",
+  "version": "0.2.0",
+  "description": "DeepSeek Harness vision bridge plugin: send images to ANY model; text-only models receive auto-generated vision descriptions (OpenAI-compatible vision API), plus a `vision` tool and a settings GUI card (Settings > Plugins > Plugin configuration)",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
     ".": "./lib/index.js",
+    "./client": "./lib/client.js",
     "./package.json": "./package.json"
   },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-api-remotes"
+      ],
+      "platform": "web"
     }
   },
   "scripts": {
-    "check": "node --check lib/index.js && node --check cli/vision.mjs && node --check scripts/smoke.mjs",
+    "check": "node --check lib/index.js && node --check lib/vision.js && node --check lib/client.js && node --check cli/vision.mjs && node --check scripts/smoke.mjs && node --check scripts/host-check.mjs",
     "smoke": "node scripts/smoke.mjs"
   },
   "files": [
@@ -41,22 +52,11 @@
   "license": "MIT",
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/schemastery": "^3.18.1",
+    "@deepseek-ai/dsh-tools": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-settings": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-credentials": "^0.1.0-rc.6",
     "@deepseek-ai/dsh-attachment": "^0.1.0-rc.6",
-    "@deepseek-ai/dsh-llm": "^0.1.0-rc.6",
-    "@deepseek-ai/dsh-tools": "^0.1.0-rc.6"
-  },
-  "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": {
-      "optional": true
-    },
-    "@deepseek-ai/dsh-attachment": {
-      "optional": true
-    },
-    "@deepseek-ai/dsh-llm": {
-      "optional": true
-    },
-    "@deepseek-ai/dsh-tools": {
-      "optional": true
-    }
+    "@deepseek-ai/dsh-llm": "^0.1.0-rc.6"
   }
 }

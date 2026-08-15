@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 /**
- * dsh-vision 独立识图脚本 —— 与 vision-helper 的 vision.js 用法一致，
- * 配置读取顺序：环境变量 VISION_* > $DSH_HOME/storages/dsh-vision/config.json
- * > <插件目录>/config.json > 内置默认值。
+ * dsh-vision 独立识图脚本 —— 与 vision-helper 的 vision.js 用法一致。
+ * 配置读取：环境变量 VISION_* 优先，config.json（$DSH_HOME/storages/dsh-vision/ 或插件目录）兜底。
  *
  * 用法:
  *   node cli/vision.mjs <图片路径> [问题]
@@ -10,11 +9,8 @@
  */
 
 import { existsSync, readFileSync } from 'node:fs'
-import { resolve as resolvePath, extname, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { resolveConfig, visionChat, buildVisionPrompt } from '../lib/index.js'
-
-const here = dirname(fileURLToPath(import.meta.url))
+import { resolve as resolvePath, extname } from 'node:path'
+import { effectiveVisionConfig, buildVisionPrompt, visionChat, findConfigFile } from '../lib/vision.js'
 
 function parseArgs(argv) {
   let imageSource = ''
@@ -50,10 +46,10 @@ async function main() {
     console.error('      node cli/vision.mjs --url <图片链接> [问题]')
     process.exit(1)
   }
-  const config = resolveConfig(process.env)
-  if (!config.enabled) {
-    console.error('dsh-vision 已禁用（DSH_VISION_ENABLED=false）。')
-    process.exit(1)
+  const file = findConfigFile()
+  const config = {
+    ...effectiveVisionConfig({ ...file, enabled: process.env.DSH_VISION_ENABLED !== 'false' }, process.env),
+    apiKey: process.env.VISION_API_KEY || file.apiKey || '',
   }
   if (!config.apiKey) {
     console.error('缺少 API Key：请设置 VISION_API_KEY 环境变量，或在 config.json 中填写 apiKey。')

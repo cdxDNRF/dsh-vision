@@ -1,7 +1,18 @@
 # dsh-vision bundle patch for the DSH host composition.
 # When this package is listed in the profile's `dsh.profile.bundles`,
 # the loader merges this patch automatically: the row below mounts the
-# host-side vision bridge for every session.
+# host-side vision bridge for every session, with the composition-layer
+# config defaults (users override them per-install in the Settings UI
+# under "Plugins > Plugin configuration", or by re-covering this row in
+# their profile's cordis.patch.yml).
 - insert:
     - id: dsh-vision
       name: '@cdxdnrf/dsh-vision'
+      config:
+        enabled: true
+        baseUrl: 'https://api.sudocode.chat/v1'
+        model: 'gpt-5.6-luna'
+        proxy: ''
+        maxTokens: 1024
+        timeoutMs: 120000
+        cacheMaxEntries: 200
