@@ -4,14 +4,25 @@ DeepSeek Harness 视觉桥接插件：**任何模型都能发图、看图**。
 
 - 非多模态模型（如 deepseek-chat）收到图片会直接报错拒收（`Model ... does not support image input`）。本插件接入宿主三个关键点，让图片在任何模型下都能正常发送；对不支持图片输入的模型，在请求进入适配器之前自动调用**视觉模型**把图片转成文字描述（含逐字 OCR）注入请求。
 - 视觉识别能力（原 vision-helper 的 `vision.js`）**完整内置**：OpenAI 兼容接口、代理支持、独立 CLI 与 `vision` 模型工具，不依赖任何 skill。
-- 按 [官方插件文档](https://deepseek-harness.github.io/deepseek-harness/develop/basic/) 规范编写：导出 Schemastery `Config` schema、`apply(ctx, config)`、`defineTool` 工具注册、`dsh.bundle` 组合包 manifest，并在**设置 → 插件 → 插件配置**里提供图形化配置卡片（自定义 API 地址 / 模型 / Key，即改即生效）。
+- 按 [官方插件文档](https://deepseek-harness.github.io/deepseek-harness/develop/basic/) 规范编写：`apply(ctx, config)`、`Config` schema（Standard Schema 接口）、`dsh.bundle` 组合包 manifest，并在**设置 → 插件 → 插件配置**里提供图形化配置卡片（自定义 API 地址 / 模型 / Key，即改即生效）。
+
+### 零 in-box 导入（模块身份分裂免疫）
+
+v0.3 起本插件**不 import 任何 `@deepseek-ai/*` 包**，且**零依赖、零 peerDependencies**：
+
+- Cordis loader 只要求 `Config['~standard'].validate`（Standard Schema 接口）→ 手写；
+- settings 服务只要求 schema 可调用且带 `toJSON()`（信封兼容客户端 `new Schema(envelope)` 重水化、节点结构兼容 `redactSecrets`）→ 手写（已用部署正本 schemastery + dsh-settings 实测兼容）；
+- 工具注册表接受普通 `ToolDefinition`（JSON Schema 参数）→ 手写；
+- 凭证服务接受普通字符串引用 → 直接传字符串。
+
+因此无论 `dsh plugin add` / pnpm 如何安装依赖，插件自身的模块图都不会与 harness 产生第二个实例——此前导致 `reading 'prepare'` 崩溃的 `TOOL_RUNTIME_SCHEDULER` Symbol 分裂类故障**从结构上不可能发生**；安装也不会向 profile 引入任何 in-box 物理副本。
 
 ## 功能
 
 1. **图片随便发**：对显式声明纯文本的模型补齐 `image` 输入能力声明（包装 `adapter.resolveModel`），打开宿主 `prompt` / `selectModel` 的图片准入门禁；`read_image`（fs 工具）对任意模型可用。
 2. **自动桥接**：包装 `adapter.stream`——请求带图且目标模型**真实能力**（未补丁前）不支持图片时，把图片块递归替换为视觉模型文字描述再交给适配器。会话记录与界面始终显示原图；框架的请求冻结、不变量校验、prepared-call 路径全部不受影响（改写只发生在适配器边界）。
-3. **`vision` 模型工具**（官方 `defineTool` 注册）：agent 可主动分析本地图片路径或 http(s) 图片链接。
-4. **配置 GUI**：设置 → 插件 → 插件配置 → 「视觉桥接（dsh-vision）」卡片：接口地址、模型、API Key、代理、最大输出、超时。
+3. **`vision` 模型工具**：agent 可主动分析本地图片路径或 http(s) 图片链接。
+4. **配置 GUI**：设置 → 插件 → 插件配置 → 「视觉桥接（dsh-vision）」卡片：接口地址、模型、API Key、代理、最大输出、超时。命名空间通过 `llm.registerConfigurableProviders` 按官方契约暴露给 Web 设置客户端（仅声明目录、不注册 adapter，视觉服务不会成为 agent 的 LLM 路由）。
 5. **独立 CLI**：`node cli/vision.mjs <路径|--url 链接> [问题]`，与 vision-helper 用法一致。
 6. **缓存**：同一张图 + 同一段问题只调用一次视觉服务；失败结果缓存 60 秒。
 7. **可逆**：全部副作用挂在 Fiber 上；`llm/adapters-updated` 事件驱动对新注册适配器的增量包装；插件停止/更新自动还原。
@@ -94,9 +105,9 @@ dsh plugin --profile <name> remove @cdxdnrf/dsh-vision
 ## 开发与测试
 
 ```bash
-npm run check      # 语法检查（host 入口 / 核心 / client bundle / CLI / 测试）
+npm run check      # 语法检查（host 入口 / 核心 / client bundle / CLI / 测试），零依赖可直接运行
 npm run smoke      # 离线冒烟：假视觉服务器，覆盖能力补齐、桥接、缓存、多模态直传、增量包装、卸载还原
-node scripts/host-check.mjs   # 宿主入口端到端（需临时把部署 node_modules 链到插件目录）
+npm run host-check # 宿主入口端到端：Standard Schema 契约、settings 接线、目录暴露、vision 工具注册与执行链路
 ```
 
 ## 与官方文档的对应关系
@@ -104,8 +115,8 @@ node scripts/host-check.mjs   # 宿主入口端到端（需临时把部署 node_
 | 文档页 | 本插件的实现 |
 | --- | --- |
 | 第一个插件 | 导出 `name` / `inject` / `apply(ctx, config)`；副作用全部 `ctx.effect` |
-| 开发一个 Tool | `defineTool`（@deepseek-ai/dsh-tools）注册 `vision` 工具 |
-| 插件配置 | 导出 Schemastery `Config` schema；行 config 作为 base；`installSettingsSection` 挂接设置服务（GUI 即改即生效） |
+| 开发一个 Tool | 注册 `vision` 工具（手写 `ToolDefinition`，与 `defineTool` 的 JSON Schema 输出等价） |
+| 插件配置 | 导出 `Config`（手写 Standard Schema，`~standard.validate` + callable + `toJSON()` 信封，与 schemastery 兼容）；行 config 作为 base；内联 `installSettingsSection` 等价接线（GUI 即改即生效） |
 | 打包与安装 | `dsh.bundle.patch` 组合包 manifest；`dsh plugin add` 安装；`dsh.client` 声明客户端半边 |
 
 ## 限制

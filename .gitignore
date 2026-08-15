@@ -4,6 +4,6 @@ config.json
 
 # node / pnpm artifacts
 node_modules/
-.pnpm-store/
+pnpm-lock.yaml
 *.log
 .DS_Store

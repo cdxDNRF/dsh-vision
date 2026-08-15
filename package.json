@@ -1,7 +1,7 @@
 {
   "name": "@cdxdnrf/dsh-vision",
-  "version": "0.2.0",
-  "description": "DeepSeek Harness vision bridge plugin: send images to ANY model; text-only models receive auto-generated vision descriptions (OpenAI-compatible vision API), plus a `vision` tool and a settings GUI card (Settings > Plugins > Plugin configuration)",
+  "version": "0.3.0",
+  "description": "DeepSeek Harness vision bridge plugin: send images to ANY model; text-only models receive auto-generated vision descriptions (OpenAI-compatible vision API), plus a `vision` tool and a settings GUI card (Settings > Plugins > Plugin configuration). Zero in-box imports, zero dependencies — immune to module-identity splits.",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
@@ -26,7 +26,8 @@
   },
   "scripts": {
     "check": "node --check lib/index.js && node --check lib/vision.js && node --check lib/client.js && node --check cli/vision.mjs && node --check scripts/smoke.mjs && node --check scripts/host-check.mjs",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "host-check": "node scripts/host-check.mjs"
   },
   "files": [
     "lib",
@@ -49,14 +50,5 @@
     "type": "git",
     "url": "git+https://github.com/cdxDNRF/dsh-vision.git"
   },
-  "license": "MIT",
-  "peerDependencies": {
-    "@deepseek-ai/cordis": "^4.0.1",
-    "@deepseek-ai/schemastery": "^3.18.1",
-    "@deepseek-ai/dsh-tools": "^0.1.0-rc.6",
-    "@deepseek-ai/dsh-settings": "^0.1.0-rc.6",
-    "@deepseek-ai/dsh-credentials": "^0.1.0-rc.6",
-    "@deepseek-ai/dsh-attachment": "^0.1.0-rc.6",
-    "@deepseek-ai/dsh-llm": "^0.1.0-rc.6"
-  }
+  "license": "MIT"
 }
