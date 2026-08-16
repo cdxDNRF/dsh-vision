@@ -80,12 +80,13 @@ const effectLabels = []
 const mockCtx = {
   llm: runtime,
   tools: { register(def) { registeredTools.push(def); return () => {} } },
+  attachments: {
+    async readImage(ref) {
+      return { ref, data: new Uint8Array(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64')) }
+    },
+  },
   get(name) {
-    if (name === 'attachments') return {
-      async readImage(ref) {
-        return { ref, data: new Uint8Array(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64')) }
-      },
-    }
+    if (name === 'credentials') return undefined
     return undefined
   },
   logger: { info: () => {}, warn: console.warn, error: console.error },
