@@ -1,6 +1,6 @@
 {
   "name": "@cdxdnrf/dsh-vision",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "DeepSeek Harness vision bridge plugin: send images to ANY model; text-only models receive auto-generated vision descriptions (OpenAI-compatible vision API), plus a `vision` tool and a settings GUI card (Settings > Plugins > Plugin configuration). Zero in-box imports, zero dependencies — immune to module-identity splits.",
   "type": "module",
   "main": "lib/index.js",
@@ -25,9 +25,10 @@
     }
   },
   "scripts": {
-    "check": "node --check lib/index.js && node --check lib/vision.js && node --check lib/client.js && node --check cli/vision.mjs && node --check scripts/smoke.mjs && node --check scripts/host-check.mjs",
+    "check": "node --check lib/index.js && node --check lib/vision.js && node --check lib/client.js && node --check cli/vision.mjs && node --check scripts/smoke.mjs && node --check scripts/host-check.mjs && node --check scripts/client-contract.mjs",
     "smoke": "node scripts/smoke.mjs",
-    "host-check": "node scripts/host-check.mjs"
+    "host-check": "node scripts/host-check.mjs",
+    "client-contract": "node scripts/client-contract.mjs"
   },
   "files": [
     "lib",

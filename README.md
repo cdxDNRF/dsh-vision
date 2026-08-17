@@ -4,7 +4,7 @@ DeepSeek Harness 视觉桥接插件：**任何模型都能发图、看图**。
 
 - 非多模态模型（如 deepseek-chat）收到图片会直接报错拒收（`Model ... does not support image input`）。本插件接入宿主三个关键点，让图片在任何模型下都能正常发送；对不支持图片输入的模型，在请求进入适配器之前自动调用**视觉模型**把图片转成文字描述（含逐字 OCR）注入请求。
 - 视觉识别能力（原 vision-helper 的 `vision.js`）**完整内置**：OpenAI 兼容接口、代理支持、独立 CLI 与 `vision` 模型工具，不依赖任何 skill。
-- 按 [官方插件文档](https://deepseek-harness.github.io/deepseek-harness/develop/basic/) 规范编写：`apply(ctx, config)`、`Config` schema（Standard Schema 接口）、`dsh.bundle` 组合包 manifest，并在**设置 → 插件 → 插件配置**里提供图形化配置卡片（自定义 API 地址 / 模型 / Key，即改即生效）。
+- 按 [官方插件文档](https://deepseek-harness.github.io/deepseek-harness/develop/basic/) 规范编写：`apply(ctx, config)`、`Config` schema（Standard Schema 接口）、`dsh.bundle` 组合包 manifest，并在**设置 → 插件 → 插件配置**里提供图形化配置卡片（自定义 API 地址 / 模型 / Key，即改即生效）。兼容 dsh `0.1.0-rc.7` 的 keyed settings Slot 契约。
 
 ### 零 in-box 导入（模块身份分裂免疫）
 
@@ -16,6 +16,10 @@ v0.3 起本插件**不 import 任何 `@deepseek-ai/*` 包**，且**零依赖、�
 - 凭证服务接受普通字符串引用 → 直接传字符串。
 
 因此无论 `dsh plugin add` / pnpm 如何安装依赖，插件自身的模块图都不会与 harness 产生第二个实例——此前导致 `reading 'prepare'` 崩溃的 `TOOL_RUNTIME_SCHEDULER` Symbol 分裂类故障**从结构上不可能发生**；安装也不会向 profile 引入任何 in-box 物理副本。
+
+### dsh 0.1.0-rc.7 兼容性
+
+rc.7 将 `settings.plugin.item` 从 `list` 改成 `keyed`。本插件的宿主侧用 `ctx.inject(['settings'], ...)` 注册 `dsh-vision` 命名空间，客户端卡片在同名 keyed slot 下使用 `key: 'dsh-vision'`；两边名称必须一致，ConfigurablePluginsTab 才会派发并渲染卡片。客户端注册通过 `slots.inject` 等待 slot 声明，避免插件加载顺序竞态。
 
 ## 功能
 
@@ -105,9 +109,10 @@ dsh plugin --profile <name> remove @cdxdnrf/dsh-vision
 ## 开发与测试
 
 ```bash
-npm run check      # 语法检查（host 入口 / 核心 / client bundle / CLI / 测试），零依赖可直接运行
-npm run smoke      # 离线冒烟：假视觉服务器，覆盖能力补齐、桥接、缓存、多模态直传、增量包装、卸载还原
-npm run host-check # 宿主入口端到端：Standard Schema 契约、settings 接线、目录暴露、vision 工具注册与执行链路
+npm run check           # 语法 + rc.7 客户端 keyed-slot 契约检查
+npm run client-contract # 单独检查 key/namespace/slots.inject 注册契约
+npm run smoke           # 离线视觉桥接冒烟
+npm run host-check      # 宿主 Config/settings/provider/tool 契约检查
 ```
 
 ## 与官方文档的对应关系
