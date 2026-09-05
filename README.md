@@ -66,7 +66,7 @@ rc.7 将 `settings.plugin.item` 从 `list` 改成 `keyed`。本插件的宿主�
 | `apiKey` | `""` | 字面量密钥（secret，GUI 不读写；供行 config 高级用户） |
 | `apiKeyEnv` | `VISION_API_KEY` | 凭证引用（GUI 的 API Key 输入框写入该引用） |
 | `proxy` | `""` | 空=自动（环境变量→Windows 系统代理）；`direct`=禁用；`http://host:port`=显式 |
-| `maxTokens` | `1024` | 单次识图输出上限 |
+| `maxTokens` | `4096` | 单次识图输出上限（过低会触发截断报错） |
 | `timeoutMs` | `120000` | 单次识图超时 |
 | `cacheMaxEntries` | `200` | 描述缓存上限（LRU） |
 

@@ -13,6 +13,6 @@
         baseUrl: 'https://api.sudocode.chat/v1'
         model: 'gpt-5.6-luna'
         proxy: ''
-        maxTokens: 1024
+        maxTokens: 4096
         timeoutMs: 120000
         cacheMaxEntries: 200

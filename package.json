@@ -25,10 +25,11 @@
     }
   },
   "scripts": {
-    "check": "node --check lib/index.js && node --check lib/vision.js && node --check lib/client.js && node --check cli/vision.mjs && node --check scripts/smoke.mjs && node --check scripts/host-check.mjs && node --check scripts/client-contract.mjs",
+    "check": "node --check lib/index.js && node --check lib/vision.js && node --check lib/client.js && node --check cli/vision.mjs && node --check scripts/smoke.mjs && node --check scripts/host-check.mjs && node --check scripts/client-contract.mjs && node --check scripts/truncation-check.mjs",
     "smoke": "node scripts/smoke.mjs",
     "host-check": "node scripts/host-check.mjs",
-    "client-contract": "node scripts/client-contract.mjs"
+    "client-contract": "node scripts/client-contract.mjs",
+    "truncation-check": "node scripts/truncation-check.mjs"
   },
   "files": [
     "lib",
