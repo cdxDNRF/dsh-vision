@@ -215,7 +215,69 @@ assert.equal(contentHasImage(received.at(-1).messages[0].content), false, 'newly
 assert.deepEqual((await adapter2.resolveModel('custom', 'custom-chat')).inputModalities, ['text', 'image'])
 console.log('ok: llm/adapters-updated rewraps new adapters')
 
-// 7) 卸载还原
+// 7) 新契约（dsh 0.1.5+）：运行时经 prepareCall().stream 派发。
+//    适配器不再调用 resolveModel，且 dsh-llm 会在适配器之前按
+//    prepareCall().model.inputModalities 决定是否把图片替换成占位文本。
+const received015 = []
+const adapter015 = {
+  prepareCall(provider, model) {
+    return Promise.resolve({
+      model: { provider, id: model, name: model, inputModalities: ['text'] },
+      stream: (options) => adapter015.dispatch(options),
+    })
+  },
+  async *dispatch(options) {
+    received015.push(options)
+    yield { type: 'finish', reason: { kind: 'stop' } }
+  },
+}
+runtime.registrations.set('ds015', { provider: { id: 'ds015' }, adapter: adapter015, retryPolicy: undefined })
+for (const { listener } of events) listener()
+
+const prepared = await adapter015.prepareCall('ds015', 'text-only-model')
+assert.ok(
+  prepared.model.inputModalities.includes('image'),
+  'prepareCall model info must declare image support (otherwise dsh-llm projects images to placeholder text)',
+)
+const request015 = {
+  provider: 'ds015',
+  model: 'text-only-model',
+  sessionId: 's1',
+  messages: [{ role: 'user', source: { kind: 'user' }, content: [{ type: 'image', attachment: { attachmentId: 'img15', mediaType: 'image/png', bytes: 68, width: 1, height: 1 } }] }],
+}
+for await (const _ of prepared.stream(request015)) { /* drain */ }
+assert.equal(
+  contentHasImage(received015.at(-1).messages[0].content),
+  false,
+  'prepareCall generation stream must bridge images to text',
+)
+console.log('ok: prepareCall (dsh 0.1.5+) declares image capability and bridges its generation stream')
+
+// 8) 多模态模型在新契约下同样原样直传
+const receivedMulti = []
+const adapterMulti = {
+  prepareCall(provider, model) {
+    return Promise.resolve({
+      model: { provider, id: model, name: model, inputModalities: ['text', 'image'] },
+      stream: (options) => adapterMulti.dispatch(options),
+    })
+  },
+  async *dispatch(options) {
+    receivedMulti.push(options)
+    yield { type: 'finish', reason: { kind: 'stop' } }
+  },
+}
+runtime.registrations.set('dsmulti', { provider: { id: 'dsmulti' }, adapter: adapterMulti, retryPolicy: undefined })
+for (const { listener } of events) listener()
+const preparedMulti = await adapterMulti.prepareCall('dsmulti', 'vision-model')
+for await (const _ of preparedMulti.stream({ ...request015, provider: 'dsmulti', model: 'vision-model' })) { /* drain */ }
+assert.ok(
+  contentHasImage(receivedMulti.at(-1).messages[0].content),
+  'multimodal models must keep raw images under the prepareCall contract',
+)
+console.log('ok: prepareCall keeps raw images for multimodal models')
+
+// 9) 卸载还原
 unwrap()
 trueModalities = ['text']
 const restoredInfo = await adapter.resolveModel('deepseek', 'deepseek-chat')

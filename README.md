@@ -21,10 +21,25 @@ v0.3 起本插件**不 import 任何 `@deepseek-ai/*` 包**，且**零依赖、�
 
 rc.7 将 `settings.plugin.item` 从 `list` 改成 `keyed`。本插件的宿主侧用 `ctx.inject(['settings'], ...)` 注册 `dsh-vision` 命名空间，客户端卡片在同名 keyed slot 下使用 `key: 'dsh-vision'`；两边名称必须一致，ConfigurablePluginsTab 才会派发并渲染卡片。客户端注册通过 `slots.inject` 等待 slot 声明，避免插件加载顺序竞态。
 
+### dsh 0.1.5+ 适配器契约变更（v0.3.2）
+
+0.1.5 起适配器改用 **`prepareCall(provider, model, signal)`** 一次性绑定 `{ model, stream }`，运行时经 `prepareCall().stream` 派发；`resolveModel` / `stream` 上的包装会被**完全绕过**。更关键的是 `dsh-llm` 会在适配器**之前**检查 `prepareCall().model.inputModalities`，不含 `image` 时直接把图片替换成占位文本：
+
+```
+[image omitted because this model accepts text only; attachment sha256:xxxxxxxx]
+```
+
+此时文本模型只看到占位符，只能自己去翻文件系统或手动调用 `vision` 工具。v0.3.2 因此**同时包装两代契约**：
+
+- 旧契约（≤0.1.2）：`resolveModel` + `stream`；
+- 新契约（0.1.5+）：包装 `prepareCall`，给返回的 `model.inputModalities` 补 `image`（阻止占位文本投影），并包装该 generation 的 `stream` 做图片→文字桥接。
+
+两个包装共用同一桥接器且幂等：多模态模型（真实能力含 `image`）原样直传，未知能力（`undefined`）不主动桥接；`unwrapAll` 按代际精确还原。
+
 ## 功能
 
-1. **图片随便发**：对显式声明纯文本的模型补齐 `image` 输入能力声明（包装 `adapter.resolveModel`），打开宿主 `prompt` / `selectModel` 的图片准入门禁。
-2. **自动桥接**：包装 `adapter.stream`——请求带图且目标模型**真实能力**（未补丁前）不支持图片时，把图片块递归替换为视觉模型文字描述再交给适配器。会话记录与界面始终显示原图；框架的请求冻结、不变量校验、prepared-call 路径全部不受影响（改写只发生在适配器边界）。
+1. **图片随便发**：对显式声明纯文本的模型补齐 `image` 输入能力声明（旧契约包装 `adapter.resolveModel`，新契约包装 `adapter.prepareCall` 返回的 `model`），阻止宿主在适配器之前把图片投影成占位文本。
+2. **自动桥接**：包装适配器当前代的请求入口（旧 `adapter.stream` / 新 `prepareCall().stream`）——请求带图且目标模型**真实能力**不支持图片时，把图片块递归替换为视觉模型文字描述再交给适配器。会话记录与界面始终显示原图；框架的请求冻结、不变量校验、prepared-call 路径全部不受影响（改写只发生在适配器边界）。
 3. **`vision` 模型工具**：agent 可主动分析本地图片路径或 http(s) 图片链接，通过外部视觉模型返回文字描述。**适用于文本模型**；若当前模型本身支持多模态输入，应优先使用原生 `read_image` 工具（直接读取图片像素，无需外部 API 调用，速度更快）。
 4. **配置 GUI**：设置 → 插件 → 插件配置 → 「视觉桥接（dsh-vision）」卡片：接口地址、模型、API Key、代理、最大输出、超时。命名空间通过 `llm.registerConfigurableProviders` 按官方契约暴露给 Web 设置客户端（仅声明目录、不注册 adapter，视觉服务不会成为 agent 的 LLM 路由）。
 5. **独立 CLI**：`node cli/vision.mjs <路径|--url 链接> [问题]`，与 vision-helper 用法一致。
