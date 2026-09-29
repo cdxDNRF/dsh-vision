@@ -51,6 +51,19 @@ for (const [key, node] of Object.entries(Config.dict)) {
 assert.deepEqual(secrets, ['apiKey'])
 console.log('ok: redactSecrets node-structure compatibility')
 
+// dsh 0.2.0 设置暴露契约：settings.describe 从加载器行派生命名空间，
+// volatileForm 只收 meta.volatile 的叶子，plainSchema 会对每个叶子调用
+// new Schema(leaf.toJSON())。缺任一项都会让本行被跳过或整个 describe 抛错。
+assert.equal(root.type, 'object', 'root node must be an object schema')
+assert.equal(root.meta?.volatile, undefined, 'root must not be volatile (volatileForm recurses into its dict)')
+for (const [key, node] of Object.entries(Config.dict)) {
+  assert.equal(node.meta?.volatile, true, `field "${key}" must be volatile or volatileForm skips the whole row`)
+  assert.equal(typeof node.toJSON, 'function', `field "${key}" must expose toJSON() for plainSchema`)
+  const leaf = node.toJSON()
+  assert.ok(leaf.refs?.[leaf.uid], `field "${key}" toJSON() must be a rehydratable single-node envelope`)
+}
+console.log('ok: 0.2.0 settings projection contract (volatile leaves with per-leaf toJSON)')
+
 // ---------------------------------------------------------------------------
 // 2) apply 全流程（mock 宿主环境）
 // ---------------------------------------------------------------------------

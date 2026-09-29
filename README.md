@@ -17,9 +17,9 @@ v0.3 起本插件**不 import 任何 `@deepseek-ai/*` 包**，且**零依赖、�
 
 因此无论 `dsh plugin add` / pnpm 如何安装依赖，插件自身的模块图都不会与 harness 产生第二个实例——此前导致 `reading 'prepare'` 崩溃的 `TOOL_RUNTIME_SCHEDULER` Symbol 分裂类故障**从结构上不可能发生**；安装也不会向 profile 引入任何 in-box 物理副本。
 
-### dsh 0.2.0+ 兼容性（v0.4.0）
+### dsh 0.2.0+ 兼容性（v0.5.0）
 
-0.2.0 重做了插件管理，三个变化直接决定本插件能否工作：
+0.2.0 重做了插件管理与设置暴露，以下变化直接决定本插件能否工作：
 
 1. **插件 bundle 会被新版插件管理器停用。** profile 升级到 0.2.0 后，第三方 bundle 变成 `installed: true, enabled: false`，行不再加载（症状：`vision` 工具消失、组合里没有 `dsh-vision` 行）。启用方式任选其一：
 
@@ -30,13 +30,19 @@ v0.3 起本插件**不 import 任何 `@deepseek-ai/*` 包**，且**零依赖、�
 
    或在 Web 界面 **侧边栏「插件」→ 找到 dsh-vision → 打开开关**。启用是热生效的，无需重启。
 
-2. **`settings.plugin.item` 已移除。** 0.2.0 起配置界面是插件管理器的**详情页**，扩展点是 keyed Slot `plugins.bundle.config`，`key` = bundle 包名。
+2. **设置命名空间改由加载器行自动派生。** 0.2.0 的 `settings.describe()` 遍历 `configEditor.configuration()`：**行 id 即命名空间，行的 `Config` 即 schema，行 config 即默认层**。本插件因此不再依赖 `llm.registerConfigurableProviders` 才能被 Web 设置客户端看到。
 
-3. **`settingsScope` 已被 `configForms` 取代。** 客户端读写成 `ctx.configForms.get('dsh-vision')`（`getSnapshot` / `subscribe` / `set` / `unset`）。
+   但有两条硬性要求：① `volatileForm()` 只收 **`meta.volatile` 的叶子字段**（官方写法是逐字段 `.volatile()`），没有该标记的行被**整体跳过**（症状：`settings.describe` 无本命名空间、配置页空白）；② `plainSchema()` 会对每个 volatile 叶子调用 `new Schema(leaf.toJSON())`，**叶子必须自带 `toJSON()`**，否则整个 describe 抛错（一个命名空间都不返回）。本插件的 `Config` 两者都满足：9 个字段全部 `volatile: true`，每个叶子提供单节点信封。
 
-因此 v0.4.0 同时注册两代 UI，并且客户端 `inject` 只保留跨版本稳定的 `slots` / `locale`，其余服务一律 `ctx.get` 可选读取——硬注入 `settingsScope` 会让客户端半边在 0.2.0 上永不激活。
+3. **`settings.plugin.item` 已移除。** 0.2.0 起配置界面是插件管理器的**详情页**，扩展点是 keyed Slot `plugins.bundle.config`，`key` = bundle 包名；注册后该 bundle 页面在描述与行列表之间出现配置区。
 
-**配置 VLM 模型**：侧边栏「插件」→ 点击 `dsh-vision` → 在「配置」区改 **VLM 模型**（默认沿用组合层的 `gpt-5.6-luna`）、接口地址、代理、最大输出、超时，并可写 API Key。每个字段都有「已覆盖 / 重置」标记，重置即回落到组合层默认值。
+4. **`settingsScope` 已被 `configForms` 取代。** 客户端读写成 `ctx.configForms.get('dsh-vision')`（`getSnapshot` / `subscribe` / `set` / `unset`）。
+
+5. **API Key 走 `remote.credentials`，它受注入守卫。** 直接读 `remote.credentials` 属性会抛 `cannot get property "remote.credentials" without inject`，把整个 slot 条目打成 **abdicated**（弃权）→ 配置区静默空白；`ctx.get('remote.credentials')` 也取不到 mixin。正确做法是用运行时 `ctx.inject(['remote', 'remote.credentials'], ...)` 等它就绪。另外 Remote 调用返回**结果信封** `{ ok, value }`，必须解包（官方页面同款）。
+
+客户端 `inject` 只保留跨版本稳定的 `slots` / `locale`，其余服务用 `ctx.get` 可选读取或运行时 `ctx.inject` 等待——硬注入 `settingsScope` 会让客户端半边在 0.2.0 上永不激活。两代 UI 同时注册，各自等自己的 Slot 声明。
+
+**配置 VLM 模型**：侧边栏「插件」→ 点击 `dsh-vision` → 配置区改 **VLM 模型**（默认沿用组合层的 `gpt-5.6-luna`）、接口地址、代理、最大输出、超时，并可写 API Key（显示 Configured/未配置与引用名）。每个字段都有「已覆盖 / 重置」标记，重置即回落到组合层默认值；底部为暂存 → 保存 / 放弃（含未保存标记）。
 
 ### dsh 0.1.0-rc.7 兼容性
 

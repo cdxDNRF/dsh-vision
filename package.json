@@ -1,6 +1,6 @@
 {
   "name": "@cdxdnrf/dsh-vision",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "DeepSeek Harness vision bridge plugin: send images to ANY model; text-only models receive auto-generated vision descriptions (OpenAI-compatible vision API), plus a `vision` tool and a VLM configuration page in the web plugin manager. Zero in-box imports, zero dependencies.",
   "type": "module",
   "main": "lib/index.js",
