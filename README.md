@@ -17,6 +17,27 @@ v0.3 起本插件**不 import 任何 `@deepseek-ai/*` 包**，且**零依赖、�
 
 因此无论 `dsh plugin add` / pnpm 如何安装依赖，插件自身的模块图都不会与 harness 产生第二个实例——此前导致 `reading 'prepare'` 崩溃的 `TOOL_RUNTIME_SCHEDULER` Symbol 分裂类故障**从结构上不可能发生**；安装也不会向 profile 引入任何 in-box 物理副本。
 
+### dsh 0.2.0+ 兼容性（v0.4.0）
+
+0.2.0 重做了插件管理，三个变化直接决定本插件能否工作：
+
+1. **插件 bundle 会被新版插件管理器停用。** profile 升级到 0.2.0 后，第三方 bundle 变成 `installed: true, enabled: false`，行不再加载（症状：`vision` 工具消失、组合里没有 `dsh-vision` 行）。启用方式任选其一：
+
+   ```bash
+   # 官方 CLI（等价于 Web 侧边栏「插件」面板里的开关）
+   dsh plugin --profile web enable @cdxdnrf/dsh-vision
+   ```
+
+   或在 Web 界面 **侧边栏「插件」→ 找到 dsh-vision → 打开开关**。启用是热生效的，无需重启。
+
+2. **`settings.plugin.item` 已移除。** 0.2.0 起配置界面是插件管理器的**详情页**，扩展点是 keyed Slot `plugins.bundle.config`，`key` = bundle 包名。
+
+3. **`settingsScope` 已被 `configForms` 取代。** 客户端读写成 `ctx.configForms.get('dsh-vision')`（`getSnapshot` / `subscribe` / `set` / `unset`）。
+
+因此 v0.4.0 同时注册两代 UI，并且客户端 `inject` 只保留跨版本稳定的 `slots` / `locale`，其余服务一律 `ctx.get` 可选读取——硬注入 `settingsScope` 会让客户端半边在 0.2.0 上永不激活。
+
+**配置 VLM 模型**：侧边栏「插件」→ 点击 `dsh-vision` → 在「配置」区改 **VLM 模型**（默认沿用组合层的 `gpt-5.6-luna`）、接口地址、代理、最大输出、超时，并可写 API Key。每个字段都有「已覆盖 / 重置」标记，重置即回落到组合层默认值。
+
 ### dsh 0.1.0-rc.7 兼容性
 
 rc.7 将 `settings.plugin.item` 从 `list` 改成 `keyed`。本插件的宿主侧用 `ctx.inject(['settings'], ...)` 注册 `dsh-vision` 命名空间，客户端卡片在同名 keyed slot 下使用 `key: 'dsh-vision'`；两边名称必须一致，ConfigurablePluginsTab 才会派发并渲染卡片。客户端注册通过 `slots.inject` 等待 slot 声明，避免插件加载顺序竞态。
@@ -41,7 +62,11 @@ rc.7 将 `settings.plugin.item` 从 `list` 改成 `keyed`。本插件的宿主�
 1. **图片随便发**：对显式声明纯文本的模型补齐 `image` 输入能力声明（旧契约包装 `adapter.resolveModel`，新契约包装 `adapter.prepareCall` 返回的 `model`），阻止宿主在适配器之前把图片投影成占位文本。
 2. **自动桥接**：包装适配器当前代的请求入口（旧 `adapter.stream` / 新 `prepareCall().stream`）——请求带图且目标模型**真实能力**不支持图片时，把图片块递归替换为视觉模型文字描述再交给适配器。会话记录与界面始终显示原图；框架的请求冻结、不变量校验、prepared-call 路径全部不受影响（改写只发生在适配器边界）。
 3. **`vision` 模型工具**：agent 可主动分析本地图片路径或 http(s) 图片链接，通过外部视觉模型返回文字描述。**适用于文本模型**；若当前模型本身支持多模态输入，应优先使用原生 `read_image` 工具（直接读取图片像素，无需外部 API 调用，速度更快）。
-4. **配置 GUI**：设置 → 插件 → 插件配置 → 「视觉桥接（dsh-vision）」卡片：接口地址、模型、API Key、代理、最大输出、超时。命名空间通过 `llm.registerConfigurableProviders` 按官方契约暴露给 Web 设置客户端（仅声明目录、不注册 adapter，视觉服务不会成为 agent 的 LLM 路由）。
+4. **配置 GUI**：
+   - **dsh 0.2.0+**：侧边栏「插件」→ 点击 `dsh-vision` → 配置区（`plugins.bundle.config`，keyed by 包名），可改 **VLM 模型**、接口地址、代理、最大输出、超时与 API Key，并逐字段「重置」回组合层默认值。
+   - **dsh ≤0.1.5**：设置 → 插件 → 插件配置 → 「视觉桥接（dsh-vision）」卡片（`settings.plugin.item`）。
+
+   命名空间通过 `llm.registerConfigurableProviders` 按官方契约暴露给 Web 设置客户端（仅声明目录、不注册 adapter，视觉服务不会成为 agent 的 LLM 路由）。
 5. **独立 CLI**：`node cli/vision.mjs <路径|--url 链接> [问题]`，与 vision-helper 用法一致。
 6. **缓存**：同一张图 + 同一段问题只调用一次视觉服务；失败结果缓存 60 秒。
 7. **可逆**：全部副作用挂在 Fiber 上；`llm/adapters-updated` 事件驱动对新注册适配器的增量包装；插件停止/更新自动还原。
